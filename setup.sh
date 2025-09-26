@@ -6,6 +6,9 @@
 echo "=== Server Configuration Script ==="
 echo
 
+# Generate random password
+RANDOM_PASSWORD=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-16)
+
 # Update system packages
 echo "1. Updating system packages..."
 apt update
@@ -30,25 +33,25 @@ echo "5. Firewall status:"
 ufw status
 
 echo
-echo "6. Creating user appuser..."
-adduser appuser
+echo "6. Creating user supimobiliar..."
+adduser --disabled-password --gecos "" supimobiliar
 
 echo
-echo "7. Adding user appuser to sudo group (root privileges)..."
-usermod -aG sudo appuser
+echo "7. Setting password for user supimobiliar..."
+echo "supimobiliar:$RANDOM_PASSWORD" | chpasswd
 
 echo
-echo "8. Setting root password..."
+echo "8. Adding user supimobiliar to sudo group (root privileges)..."
+usermod -aG sudo supimobiliar
+
+echo
+echo "9. Setting root password..."
 passwd root
 
 echo
-echo "9. Configuring SSH to accept root login (WARNING: This may be a security risk)..."
+echo "10. Configuring SSH - adding port 4001..."
 # Backup SSH configuration file
 cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
-
-# Modify SSH configuration
-sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 
 # Add port 4001 to SSH if it doesn't exist
 if ! grep -q "Port 4001" /etc/ssh/sshd_config; then
@@ -56,26 +59,30 @@ if ! grep -q "Port 4001" /etc/ssh/sshd_config; then
 fi
 
 echo
-echo "10. Restarting SSH service..."
+echo "11. Restarting SSH service..."
 systemctl restart sshd
 
 echo
-echo "11. Checking open ports..."
+echo "12. Checking open ports..."
 ss -tuln | grep -E '22|4001'
 
 echo
 echo "=== CONFIGURATION COMPLETED ==="
 echo
 echo "IMPORTANT INFORMATION:"
-echo "- User created: appuser"
-echo "- User appuser has root privileges (sudo)"
+echo "- User created: supimobiliar"
+echo "- User supimobiliar has root privileges (sudo)"
 echo "- Ports opened: 22 and 4001 (TCP and UDP)"
 echo "- SSH configured to accept root login"
 echo "- SSH listening on ports 22 and 4001"
 echo
+echo "GENERATED CREDENTIALS:"
+echo "- Username: supimobiliar"
+echo "- Password: $RANDOM_PASSWORD"
+echo
 echo "SSH CONNECTIONS:"
-echo "ssh appuser@YOUR_IP -p 22"
-echo "ssh appuser@YOUR_IP -p 4001"
+echo "ssh supimobiliar@YOUR_IP -p 22"
+echo "ssh supimobiliar@YOUR_IP -p 4001"
 echo "ssh root@YOUR_IP -p 22"
 echo "ssh root@YOUR_IP -p 4001"
 echo
@@ -83,5 +90,6 @@ echo "SECURITY WARNING:"
 echo "- Root login via SSH is enabled (security risk)"
 echo "- Consider using SSH keys instead of passwords"
 echo "- Keep strong passwords for all users"
+echo "- SAVE THE PASSWORD ABOVE - IT WILL NOT BE SHOWN AGAIN"
 echo
 echo "SSH configuration backup saved at: /etc/ssh/sshd_config.backup"
